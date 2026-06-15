@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  nickname  String
+  avatar    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  novels   Novel[]
+  comments Comment[]
+  likes    Like[]
+  favorites Favorite[]
+
+  @@map("users")
+}
+
+model Novel {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  title     String
+  summary   String   @db.Text
+  cover     String?
+  type      NovelType
+  tags      Json
+  status    NovelStatus @default(draft)
+  wordCount Int      @default(0) @map("word_count")
+  isPublic  Boolean  @default(false) @map("is_public")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User       @relation(fields: [userId], references: [id])
+  chapters  Chapter[]
+  characterStates CharacterState[]
+  foreshadowings Foreshadowing[]
+  comments  Comment[]
+  likes     Like[]
+  favorites Favorite[]
+
+  @@map("novels")
+}
+
+model Chapter {
+  id        String   @id @default(uuid())
+  novelId   String   @map("novel_id")
+  number    Int
+  title     String
+  content   String   @db.LongText
+  summary   String?  @db.Text
+  status    ChapterStatus @default(draft)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@unique([novelId, number])
+  @@map("chapters")
+}
+
+model CharacterState {
+  id        String   @id @default(uuid())
+  novelId   String   @map("novel_id")
+  chapterId String   @map("chapter_id")
+  name      String
+  knows     Json
+  doesNotKnow Json   @map("does_not_know")
+  relationship Json
+  personality   String? @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@map("character_states")
+}
+
+model Foreshadowing {
+  id              String   @id @default(uuid())
+  novelId         String   @map("novel_id")
+  description     String   @db.Text
+  plantedChapter  Int      @map("planted_chapter")
+  resolvedChapter Int?     @map("resolved_chapter")
+  status          ForeshadowStatus @default(pending)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@map("foreshadowings")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  novelId   String   @map("novel_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id])
+  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  novelId   String   @map("novel_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id])
+  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, novelId])
+  @@map("likes")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  novelId   String   @map("novel_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id])
+  novel     Novel    @relation(fields: [novelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, novelId])
+  @@map("favorites")
+}
+
+enum NovelType {
+  short
+  long
+}
+
+enum NovelStatus {
+  draft
+  generating
+  ongoing
+  completed
+  failed
+}
+
+enum ChapterStatus {
+  draft
+  generating
+  completed
+  planned
+  failed
+}
+
+enum ForeshadowStatus {
+  pending
+  resolved
+}
